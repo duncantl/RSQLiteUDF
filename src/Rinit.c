@@ -99,12 +99,10 @@ void
 R_callFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
 {
     printf("Calling function\n");
-    SEXP e, ans, fun, cur, val;
+    SEXP e, ans, cur, val;
     int err = 0;
           
-    fun = (SEXP) sqlite3_user_data(ctxt);
-    PROTECT(e = allocVector(LANGSXP, nargs + 1));
-    SETCAR(e, fun);
+    e = (SEXP) sqlite3_user_data(ctxt);
     cur = CDR(e);
     for(int i = 0; i < nargs; i++) {
 	val = makeRArgument(vals[i]);
@@ -112,9 +110,15 @@ R_callFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
 	cur = CDR(cur);
     }
     ans = Rf_eval(e, R_GlobalEnv); //, &err);
-
+    PROTECT(ans);
     convertRResult(ans, ctxt);
     UNPROTECT(1);
+}
+
+void
+Rsqlite_Release(void *val)
+{
+    R_ReleaseObject((SEXP) val);
 }
 
 SEXP
@@ -123,20 +127,29 @@ R_registerSQLFunc(SEXP rdb, SEXP r_func, SEXP rname, SEXP rnargs)
     sqlite3 *db = GET_SQLITE_DB(rdb);
     void *udata = NULL;
     SQLiteFunc fun;
-printf("db = %p\n", db);
+    int nargs = INTEGER(rnargs)[0];
+
     if(TYPEOF(r_func) == EXTPTRSXP) {
 	fun = (SQLiteFunc) R_ExternalPtrAddr(r_func);
+	sqlite3_create_function(db, CHAR(STRING_ELT(rname, 0)), nargs, SQLITE_UTF8, udata, fun, NULL, NULL);
     } else {
-	R_PreserveObject(r_func);
-	udata = r_func;
+	SEXP expr;
+	expr = allocVector(LANGSXP, nargs + 1);
+	R_PreserveObject(expr);
+	SETCAR(expr, r_func);
+	udata = expr;
 	fun = R_callFunc;
+	sqlite3_create_function_v2(db, CHAR(STRING_ELT(rname, 0)), nargs, SQLITE_UTF8, udata, fun, NULL, NULL, Rsqlite_Release);
     }
-    int nargs = INTEGER(rnargs)[0];
-    sqlite3_create_function(db, CHAR(STRING_ELT(rname, 0)), nargs, SQLITE_UTF8, udata, fun, NULL, NULL);
+
     return(R_NilValue); // return a ticket to be able to release the fun.
 }
 
 
+/*
+Borrowed from the RSQLite package's code, and originally from Liam Healy.
+
+ */
 
 #include <math.h>
 #include <stdint.h>
@@ -150,7 +163,6 @@ typedef int64_t         i64;
 */
 void myfloorFunc(sqlite3_context *context, int argc, sqlite3_value **argv){
   double rVal=0.0;
-  i64 iVal=0;
 
   switch( sqlite3_value_type(argv[0]) ){
     case SQLITE_INTEGER: {

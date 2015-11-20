@@ -1,3 +1,5 @@
-export(initExtension)
+useDynLib(RSQLiteUDF)
+
+export(initExtension, sqliteExtension)
 export(createSQLFunction)
 
