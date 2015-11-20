@@ -114,15 +114,12 @@ convertRResult(SEXP ans, sqlite3_context *context)
 
 typedef void (*SQLiteFunc)(sqlite3_context*,int,sqlite3_value**);
 
-
 void
-R_callFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
+R_doCall(sqlite3_context *ctxt, int nargs, sqlite3_value **vals, SEXP e)
 {
-    printf("Calling function\n");
-    SEXP e, ans, cur, val;
+    SEXP ans, cur, val;
     int err = 0;
           
-    e = (SEXP) sqlite3_user_data(ctxt);
     cur = CDR(e);
     for(int i = 0; i < nargs; i++) {
 	val = makeRArgument(vals[i]);
@@ -132,6 +129,27 @@ R_callFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
     ans = Rf_eval(e, R_GlobalEnv); //, &err);
     PROTECT(ans);
     convertRResult(ans, ctxt);
+    UNPROTECT(1);
+}
+
+
+void
+R_callFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
+{
+    SEXP e = (SEXP) sqlite3_user_data(ctxt);
+    R_doCall(ctxt, nargs, vals, e);
+}
+
+
+void
+R_mkCallFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
+{
+    SEXP r_func = (SEXP) sqlite3_user_data(ctxt);
+    SEXP expr;
+    
+    PROTECT(expr = allocVector(LANGSXP, nargs + 1));
+    SETCAR(expr, r_func);
+    R_doCall(ctxt, nargs, vals, expr);    
     UNPROTECT(1);
 }
 
@@ -154,11 +172,17 @@ R_registerSQLFunc(SEXP rdb, SEXP r_func, SEXP rname, SEXP rnargs)
 	sqlite3_create_function(db, CHAR(STRING_ELT(rname, 0)), nargs, SQLITE_UTF8, udata, fun, NULL, NULL);
     } else {
 	SEXP expr;
-	expr = allocVector(LANGSXP, nargs + 1);
-	R_PreserveObject(expr);
-	SETCAR(expr, r_func);
-	udata = expr;
-	fun = R_callFunc;
+	if(nargs > -1) {
+	    expr = allocVector(LANGSXP, nargs + 1);
+	    R_PreserveObject(expr);
+	    SETCAR(expr, r_func);
+	    udata = expr;
+	    fun = R_callFunc;
+	} else {
+	    R_PreserveObject(r_func);
+	    udata = r_func;
+	    fun = R_mkCallFunc;
+	}
 	sqlite3_create_function_v2(db, CHAR(STRING_ELT(rname, 0)), nargs, SQLITE_UTF8, udata, fun, NULL, NULL, Rsqlite_Release);
     }
 

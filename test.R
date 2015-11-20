@@ -38,3 +38,8 @@ if(FALSE) {
 createSQLFunction(db, nchar, "nchar", 1L)
 d = dbGetQuery(db, "SELECT DISTINCT month, nchar(month) FROM date_table")
 print(d)
+
+
+createSQLFunction(db, function(x, y) x/2 + y, "foo", -1L)
+d = dbGetQuery(db, "SELECT surftemp, foo(surftemp, 2) FROM measure_table LIMIT 5")
+print(d)

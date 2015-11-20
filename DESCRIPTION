@@ -3,8 +3,11 @@ Package: RSQLiteUDF
 Title: Ability to register R functions and C routines as SQLite functions
 Description: This provides a mechanism for users to be able to register 
   R functions and C routines as functions that can be used in SQL queries
-  within SQLite.
-  This can be convenient.
+  within SQLite.   This can be convenient so that we can, e.g., filter records
+  directly in the database without having to bring them back to R and then filter them out.
+  This is very similar to what I did with Postgres and MySQL in 2000 to allow
+  R functions be used as UDFs when embedded within the DBMS engine. Here, of course,
+  SQLite is embedded in R.
   Ultimately, we want to be able to compile R functions to native code and register these.
 Author: Duncan Temple Lang
 Maintainer: Duncan Temple Lang <duncan@r-project.org>
