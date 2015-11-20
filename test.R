@@ -12,8 +12,8 @@ initExtension(db)
 d = dbGetQuery(db, "SELECT surftemp FROM measure_table LIMIT 5")
 d
 
-d = dbGetQuery(db, "SELECT surftemp, floor(surftemp), ifloor(surftemp) FROM measure_table LIMIT 5")
-print(head(d))
+#d = dbGetQuery(db, "SELECT surftemp, floor(surftemp), ifloor(surftemp) FROM measure_table LIMIT 5")
+#print(head(d))
 
 
 
