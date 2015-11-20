@@ -33,3 +33,8 @@ if(FALSE) {
 .Call("R_registerSQLFunc", db@Id, function(x) x/2, "div2", 1L)
 .Call("R_registerSQLFunc", db@Id, function(x) x/2, "div2", 1L)
 }
+
+
+createSQLFunction(db, nchar, "nchar", 1L)
+d = dbGetQuery(db, "SELECT DISTINCT month, nchar(month) FROM date_table")
+print(d)

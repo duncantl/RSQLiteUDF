@@ -68,7 +68,17 @@ makeRArgument(sqlite3_value *val)
        }
        case SQLITE_FLOAT: {
 	   ans = ScalarReal(sqlite3_value_double(val));
+	   break;
        }
+
+       case SQLITE_TEXT:
+	   ans = ScalarString(mkChar((char *) sqlite3_value_text(val)));
+	   break;
+
+       default:
+	   PROBLEM "Unhandled conversion of argument UDF from SQLite to R"
+	       WARN;
+	   break;
     }
     return(ans);
 }
@@ -84,7 +94,17 @@ convertRResult(SEXP ans, sqlite3_context *context)
       case REALSXP:
 	  sqlite3_result_double(context, REAL(ans)[0]);
 	  break;
+
+      case STRSXP: {
+	  char *str = CHAR(STRING_ELT(ans, 0));
+	  sqlite3_result_text(context, str, -1, SQLITE_TRANSIENT);
+	  break;
+      }
 // Add more
+    default:
+	   PROBLEM "Unhandled conversion of result of UDF from R to SQLite"
+	       WARN;
+	   break;
     }
 
     return(0);
