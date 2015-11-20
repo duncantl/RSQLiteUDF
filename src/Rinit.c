@@ -15,9 +15,8 @@ sqlite3_extension_init(sqlite3 *db,          /* The database connection */
 {
 
     SQLITE_EXTENSION_INIT2(pApi);
-    printf("In extension_init %p\n", db);
 //    sqlite3_create_function(db, "registerFun", 2, SQLITE_UTF8, NULL, R_registerFunc, NULL, NULL);
-    sqlite3_create_function(db, "ifloor", 1, SQLITE_UTF8, NULL, myfloorFunc, NULL, NULL);
+//    sqlite3_create_function(db, "ifloor", 1, SQLITE_UTF8, NULL, myfloorFunc, NULL, NULL);
     return(SQLITE_OK);
 }
 
@@ -192,8 +191,8 @@ R_registerSQLFunc(SEXP rdb, SEXP r_func, SEXP rname, SEXP rnargs)
 
 /*
 Borrowed from the RSQLite package's code, and originally from Liam Healy.
-
- */
+See https://www.sqlite.org/contrib
+*/
 
 #include <math.h>
 #include <stdint.h>
