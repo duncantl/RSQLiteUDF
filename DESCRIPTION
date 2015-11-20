@@ -11,6 +11,7 @@ Description: This provides a mechanism for users to be able to register
   Ultimately, we want to be able to compile R functions to native code and register these.
 Author: Duncan Temple Lang
 Maintainer: Duncan Temple Lang <duncan@r-project.org>
-License: BSD3
+License: BSD_3_clause
+Imports: RSQLite
 
 

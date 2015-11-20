@@ -1,4 +1,5 @@
 useDynLib(RSQLiteUDF)
+import(RSQLite)
 
 export(initExtension, sqliteExtension)
 export(createSQLFunction)
