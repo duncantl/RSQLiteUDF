@@ -1,0 +1,13 @@
+Version: 0.1-0
+Package: RSQLiteUDF
+Title: Ability to register R functions and C routines as SQLite functions
+Description: This provides a mechanism for users to be able to register 
+  R functions and C routines as functions that can be used in SQL queries
+  within SQLite.
+  This can be convenient.
+  Ultimately, we want to be able to compile R functions to native code and register these.
+Author: Duncan Temple Lang
+Maintainer: Duncan Temple Lang <duncan@r-project.org>
+License: BSD3
+
+
