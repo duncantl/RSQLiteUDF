@@ -1,8 +1,9 @@
 
 createSQLFunction =
-function(db, func, name = substitute(func), nargs = -1L, isRoutine = FALSE, userData = NULL)
+function(db, func, nargs = -1L, name = substitute(func), isRoutine = is.character(func), userData = NULL)
 {
   sqliteExtension(db, pkg = "RSQLiteUDF")
+  name # force
   
   if(is.character(func) && isRoutine)
      func = getNativeSymbolInfo(func)$address
@@ -26,9 +27,10 @@ function(param)
 
 
 createSQLAggregateFunction =
-function(db, step, final, name = substitute(step), nargs = -1L, isRoutine = FALSE, userData = NULL)
+function(db, step, final, nargs = -1L, name = substitute(step), isRoutine = FALSE, userData = NULL)
 {
   sqliteExtension(db, pkg = "RSQLiteUDF")
+  
   if(is.character(step) && isRoutine) 
      step = getNativeSymbolInfo(step)$address
   

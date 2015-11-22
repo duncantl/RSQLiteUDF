@@ -13,8 +13,9 @@
   multiple records and finally return a single result (e.g. average).
 }
 \usage{
-createSQLFunction(db, func, name = substitute(func), nargs = -1L, isRoutine = FALSE, userData = NULL)
-createSQLAggregateFunction(db, step, final, name = substitute(step), nargs = -1L, 
+createSQLFunction(db, func, nargs = -1L, name = substitute(func),
+                   isRoutine = is.character(func), userData = NULL)
+createSQLAggregateFunction(db, step, final, nargs = -1L, name = substitute(step),
                             isRoutine = FALSE, userData = NULL) 
 }
 %- maybe also 'usage' for other objects documented here.
@@ -37,7 +38,11 @@ createSQLAggregateFunction(db, step, final, name = substitute(step), nargs = -1L
   \item{name}{the name by which this function can be called in SQL}
   \item{nargs}{the number of arguments that should be specified in each
     call to this function. If this is -1, the function can be called
-    with different numbers of arguments, i.e., it is variadic.}
+    with different numbers of arguments, i.e., it is variadic.
+    This is more flexible and general, but has a slightly higher
+    overhead.
+   For aggregate functions, nargs is the number of inputs to the
+   record/step function. The final function is called with no inputs.}
   \item{isRoutine}{a logical value, with \code{TRUE} indicating that
     \code{func} is to be interpreted as a compiled routine.
     This then interprets \code{func} as the name of the routine
@@ -66,11 +71,16 @@ library(RSQLite)
 db = dbConnect(SQLite(), ":memory:")
 
 ptr = getNativeSymbolInfo("myfloorFunc")$address
-createSQLFunction(db, ptr, "myfloor", 1L)
+createSQLFunction(db, ptr, 1L, "myfloor")
 dbGetQuery(db, "SELECT myfloor(2.3);")
 
+# We can refer to a C routine by name and leave getNativeSymbolInfo()
+# resolve it (without knowing the DLL/DSO). This is potentially "dangerous"!
+createSQLFunction(db, "lastNChars", 2L)
+dbGetQuery(db, "SELECT lastNChars('USA:22 September 1986', 4);")
 
-createSQLFunction(db, nchar, "numChars", 1L)
+
+createSQLFunction(db, nchar, 1L, "numChars")
 dbGetQuery(db, "SELECT numChars('bob');")
 dbGetQuery(db, "SELECT numChars('Robert');")
 }
