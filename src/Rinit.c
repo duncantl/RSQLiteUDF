@@ -96,7 +96,7 @@ convertRResult(SEXP ans, sqlite3_context *context)
 	  break;
 
       case STRSXP: {
-	  char *str = CHAR(STRING_ELT(ans, 0));
+	  const char *str = CHAR(STRING_ELT(ans, 0));
 	  sqlite3_result_text(context, str, -1, SQLITE_TRANSIENT);
 	  break;
       }
@@ -128,10 +128,12 @@ R_doCall(sqlite3_context *ctxt, int nargs, sqlite3_value **vals, SEXP e)
 	SETCAR(cur, val);
 	cur = CDR(cur);
     }
-    ans = Rf_eval(e, R_GlobalEnv); //, &err);
-    PROTECT(ans);
-    convertRResult(ans, ctxt);
-    UNPROTECT(1);
+    ans = R_tryEval(e, R_GlobalEnv, &err);
+    if(err == 0) {
+	PROTECT(ans);
+	convertRResult(ans, ctxt);
+	UNPROTECT(1);
+    }
 }
 
 
@@ -207,14 +209,14 @@ Rsqlite_ReleaseAggregate(void *ptr)
 void
 R_callAggregateFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
 {
-     SEXP *expressions = (SEXP) sqlite3_user_data(ctxt);
+     SEXP *expressions = (SEXP *) sqlite3_user_data(ctxt);
      R_doCall(ctxt, nargs, vals, expressions[0]);     
 }
 
 void
 R_callFinalFunc(sqlite3_context *ctxt)
 {
-     SEXP *expressions = (SEXP) sqlite3_user_data(ctxt);
+     SEXP *expressions = (SEXP *) sqlite3_user_data(ctxt);
      SEXP ans = Rf_eval(expressions[1], R_GlobalEnv);
      convertRResult(ans, ctxt);
 }
@@ -222,7 +224,7 @@ R_callFinalFunc(sqlite3_context *ctxt)
 void
 R_mkAggregateCallFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
 {
-     SEXP *expressions = (SEXP) sqlite3_user_data(ctxt);
+     SEXP *expressions = (SEXP *) sqlite3_user_data(ctxt);
      R_doCall(ctxt, nargs, vals, expressions[0]);    
 }
 
@@ -239,7 +241,7 @@ R_registerSQLAggregateFunc(SEXP rdb, SEXP r_stepFunc, SEXP r_finalFunc, SEXP rna
 
     if(TYPEOF(r_stepFunc) == EXTPTRSXP) {
 	stepFun = (SQLiteFunc) R_ExternalPtrAddr(r_stepFunc);
-	finalFun = (SQLiteFunc) R_ExternalPtrAddr(r_finalFunc);
+	finalFun = (SQLiteFinalFunc) R_ExternalPtrAddr(r_finalFunc);
 	if(TYPEOF(ruserData) == EXTPTRSXP)
 	    udata = R_ExternalPtrAddr(ruserData);
 
@@ -272,6 +274,24 @@ R_registerSQLAggregateFunc(SEXP rdb, SEXP r_stepFunc, SEXP r_finalFunc, SEXP rna
     return(R_NilValue); // return a ticket to be able to release the fun.
 }
 
+
+
+/*
+  Get the last n characters from a string
+ This is motivated by pulling the year from the end of a string such as
+   USA:22 September 1986 
+ to get 1986
+ */
+void 
+lastNChars(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+    const char * str;
+    const char *ptr;
+    str = sqlite3_value_text(argv[0]);
+    int n = sqlite3_value_int(argv[1]);
+    ptr = str + strlen(str) - n ;
+    sqlite3_result_text(context, ptr, -1, SQLITE_TRANSIENT);
+}
 
 
 
