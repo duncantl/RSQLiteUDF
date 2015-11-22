@@ -1,4 +1,4 @@
-Version: 0.1-0
+Version: 0.2-0
 Package: RSQLiteUDF
 Title: Ability to register R functions and C routines as SQLite functions
 Description: This provides a mechanism for users to be able to register 

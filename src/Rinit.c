@@ -275,6 +275,7 @@ R_registerSQLAggregateFunc(SEXP rdb, SEXP r_stepFunc, SEXP r_finalFunc, SEXP rna
 }
 
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 /*
   Get the last n characters from a string
@@ -289,8 +290,12 @@ lastNChars(sqlite3_context *context, int argc, sqlite3_value **argv)
     const char *ptr;
     str = sqlite3_value_text(argv[0]);
     int n = sqlite3_value_int(argv[1]);
-    ptr = str + strlen(str) - n ;
-    sqlite3_result_text(context, ptr, -1, SQLITE_TRANSIENT);
+    int len = strlen(str);
+    if(n > 0) {
+        n = MIN(len, n);
+	ptr = str +  len - n ;
+	sqlite3_result_text(context, ptr, -1, SQLITE_TRANSIENT);
+    }
 }
 
 
