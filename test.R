@@ -6,6 +6,7 @@ library(RSQLiteUDF)
 #db = dbConnect(SQLite(), "Date")
 db = dbConnect(SQLite(), "dataexpo")
 
+# Load RSQLiteUDF and the RSQLite extensions
 sqliteExtension(db, getLoadedDLLs()[["RSQLiteUDF"]][["path"]])
 initExtension(db)
 
@@ -35,6 +36,7 @@ if(FALSE) {
 }
 
 
+# Strings
 createSQLFunction(db, nchar, "nchar", 1L)
 d = dbGetQuery(db, "SELECT DISTINCT month, nchar(month) FROM date_table")
 print(d)
@@ -43,3 +45,59 @@ print(d)
 createSQLFunction(db, function(x, y) x/2 + y, "foo", -1L)
 d = dbGetQuery(db, "SELECT surftemp, foo(surftemp, 2) FROM measure_table LIMIT 5")
 print(d)
+
+
+
+gen =
+function()
+{
+  total = 0
+  count = 0L
+  
+  list( update = function(val) {
+                    total <<- total + val
+                    count <<- count + 1L
+                 },
+        value = function() total/count)
+}
+
+funs = gen()
+createSQLAggregateFunction(db, funs$update, funs$value, "mean", 1L)
+d = dbGetQuery(db, "SELECT mean(surftemp), AVG(surftemp) FROM measure_table")
+print(d)
+
+
+
+
+genCor =
+function()
+{
+  xy = 0
+  x = 0
+  y = 0
+  x2 = 0
+  y2 = 0
+  count = 0L
+  
+  list( update = function(a, b) {
+                    xy <<- xy + a*b
+                    x <<- x + a
+                    y <<- y + b
+                    x2 <<- x2 + a*a
+                    y2 <<- y2 + b*b                    
+                    count <<- count + 1L
+                 },
+        value = function()
+                    (count * xy - x * y)/ (sqrt( (count - 1) * x2 - x^2) * sqrt( (count - 1) * y2 - y^2))
+        )
+}
+funs = genCor()
+createSQLAggregateFunction(db, funs$update, funs$value, "cor", 2L)
+d = dbGetQuery(db, "SELECT cor(surftemp, temperature) FROM measure_table")
+print(d)
+
+tbl = dbReadTable(db, "measure_table")[, c("surftemp", "temperature")]
+ans = cor(tbl[,1], tbl[,2])
+
+
+

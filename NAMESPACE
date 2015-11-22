@@ -3,4 +3,6 @@ import(RSQLite)
 
 export(initExtension, sqliteExtension)
 export(createSQLFunction)
+export(createSQLAggregateFunction)
+
 
