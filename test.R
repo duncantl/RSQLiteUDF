@@ -7,8 +7,7 @@ library(RSQLiteUDF)
 db = dbConnect(SQLite(), "dataexpo")
 
 # Load RSQLiteUDF and the RSQLite extensions
-sqliteExtension(db, getLoadedDLLs()[["RSQLiteUDF"]][["path"]])
-initExtension(db)
+sqliteExtension(db) # want the floor function from RSQLite extensions.
 
 d = dbGetQuery(db, "SELECT surftemp FROM measure_table LIMIT 5")
 d
@@ -19,13 +18,13 @@ d
 
 
 ptr = getNativeSymbolInfo("myfloorFunc")$address
+createSQLFunction(db, ptr, "myfloor", nargs = 1L)
 
-createSQLFunction(db, ptr, "myfloor", 1L)
 d = dbGetQuery(db, "SELECT surftemp, floor(surftemp), myfloor(surftemp) FROM measure_table LIMIT 5")
 print(d)
 
 
-createSQLFunction(db, function(x) x/2, "div2", 1L)
+createSQLFunction(db, function(x) x/2, "div2", nargs = 1L)
 d = dbGetQuery(db, "SELECT surftemp, div2(surftemp) FROM measure_table LIMIT 5")
 print(d)
 
@@ -37,16 +36,21 @@ if(FALSE) {
 
 
 # Strings
-createSQLFunction(db, nchar, "nchar", 1L)
+createSQLFunction(db, nchar, "nchar", nargs = 1L)
 d = dbGetQuery(db, "SELECT DISTINCT month, nchar(month) FROM date_table")
 print(d)
 
 
-createSQLFunction(db, function(x, y) x/2 + y, "foo", -1L)
+createSQLFunction(db, function(x, y) x/2 + y, "foo", nargs = -1L)
 d = dbGetQuery(db, "SELECT surftemp, foo(surftemp, 2) FROM measure_table LIMIT 5")
 print(d)
 
 
+###########################
+
+# These two examples are very bad implementations of the sum and variance/correlation
+# that do not deal with numerical inaccuracies that arise even in these  data sets.
+# There are much better computational approaches.
 
 gen =
 function()
@@ -62,7 +66,7 @@ function()
 }
 
 funs = gen()
-createSQLAggregateFunction(db, funs$update, funs$value, "mean", 1L)
+createSQLAggregateFunction(db, funs$update, funs$value, "mean", nargs = 1L)
 d = dbGetQuery(db, "SELECT mean(surftemp), AVG(surftemp) FROM measure_table")
 print(d)
 
@@ -92,7 +96,7 @@ function()
         )
 }
 funs = genCor()
-createSQLAggregateFunction(db, funs$update, funs$value, "cor", 2L)
+createSQLAggregateFunction(db, funs$update, funs$value, "cor", nargs = 2L)
 d = dbGetQuery(db, "SELECT cor(surftemp, temperature) FROM measure_table")
 print(d)
 
