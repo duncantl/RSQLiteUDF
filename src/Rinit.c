@@ -2,6 +2,7 @@
 SQLITE_EXTENSION_INIT1
 
 #include <Rdefines.h>
+#include <stdlib.h>
 
 void R_registerFunc(sqlite3_context*, int nargs, sqlite3_value **vals);
 void myfloorFunc(sqlite3_context *context, int argc, sqlite3_value **argv);
@@ -112,6 +113,8 @@ convertRResult(SEXP ans, sqlite3_context *context)
 
 
 typedef void (*SQLiteFunc)(sqlite3_context*,int,sqlite3_value**);
+typedef void (*SQLiteFinalFunc)(sqlite3_context *);
+
 
 void
 R_doCall(sqlite3_context *ctxt, int nargs, sqlite3_value **vals, SEXP e)
@@ -159,7 +162,7 @@ Rsqlite_Release(void *val)
 }
 
 SEXP
-R_registerSQLFunc(SEXP rdb, SEXP r_func, SEXP rname, SEXP rnargs)
+R_registerSQLFunc(SEXP rdb, SEXP r_func, SEXP rname, SEXP rnargs, SEXP userData)
 {
     sqlite3 *db = GET_SQLITE_DB(rdb);
     void *udata = NULL;
@@ -168,6 +171,8 @@ R_registerSQLFunc(SEXP rdb, SEXP r_func, SEXP rname, SEXP rnargs)
 
     if(TYPEOF(r_func) == EXTPTRSXP) {
 	fun = (SQLiteFunc) R_ExternalPtrAddr(r_func);
+	if(Rf_length(userData))
+	    udata = R_ExternalPtrAddr(userData);
 	sqlite3_create_function(db, CHAR(STRING_ELT(rname, 0)), nargs, SQLITE_UTF8, udata, fun, NULL, NULL);
     } else {
 	SEXP expr;
@@ -187,6 +192,88 @@ R_registerSQLFunc(SEXP rdb, SEXP r_func, SEXP rname, SEXP rnargs)
 
     return(R_NilValue); // return a ticket to be able to release the fun.
 }
+
+
+void
+Rsqlite_ReleaseAggregate(void *ptr)
+{
+    SEXP *arr = (SEXP *) ptr;
+    R_ReleaseObject(arr[0]);
+    R_ReleaseObject(arr[1]);
+    free(ptr);
+}
+
+
+void
+R_callAggregateFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
+{
+     SEXP *expressions = (SEXP) sqlite3_user_data(ctxt);
+     R_doCall(ctxt, nargs, vals, expressions[0]);     
+}
+
+void
+R_callFinalFunc(sqlite3_context *ctxt)
+{
+     SEXP *expressions = (SEXP) sqlite3_user_data(ctxt);
+     SEXP ans = Rf_eval(expressions[1], R_GlobalEnv);
+     convertRResult(ans, ctxt);
+}
+
+void
+R_mkAggregateCallFunc(sqlite3_context *ctxt, int nargs,sqlite3_value** vals)
+{
+     SEXP *expressions = (SEXP) sqlite3_user_data(ctxt);
+     R_doCall(ctxt, nargs, vals, expressions[0]);    
+}
+
+
+
+SEXP
+R_registerSQLAggregateFunc(SEXP rdb, SEXP r_stepFunc, SEXP r_finalFunc, SEXP rname, SEXP rnargs, SEXP ruserData)
+{
+    sqlite3 *db = GET_SQLITE_DB(rdb);
+    void *udata = NULL;
+    SQLiteFunc stepFun;
+    SQLiteFinalFunc finalFun;
+    int nargs = INTEGER(rnargs)[0];
+
+    if(TYPEOF(r_stepFunc) == EXTPTRSXP) {
+	stepFun = (SQLiteFunc) R_ExternalPtrAddr(r_stepFunc);
+	finalFun = (SQLiteFunc) R_ExternalPtrAddr(r_finalFunc);
+	if(TYPEOF(ruserData) == EXTPTRSXP)
+	    udata = R_ExternalPtrAddr(ruserData);
+
+	sqlite3_create_function(db, CHAR(STRING_ELT(rname, 0)), nargs, SQLITE_UTF8, udata, NULL, stepFun, finalFun);
+
+    } else {
+	SEXP expr;
+	SEXP *funs = (SEXP *) malloc(sizeof(SEXP) * 2);
+	udata = funs;
+
+	funs[1] = expr = allocVector(LANGSXP, 1);
+	R_PreserveObject(expr);
+	SETCAR(expr, r_finalFunc);	    
+	finalFun = R_callFinalFunc;
+
+	if(nargs > -1) {
+	    funs[0] = expr = allocVector(LANGSXP, nargs + 1);
+	    R_PreserveObject(expr);
+	    SETCAR(expr, r_stepFunc);
+	    
+	    stepFun = R_callAggregateFunc;
+	} else {
+	    R_PreserveObject(r_stepFunc);
+	    funs[0] = r_stepFunc;
+	    stepFun = R_mkAggregateCallFunc;
+	}
+	sqlite3_create_function_v2(db, CHAR(STRING_ELT(rname, 0)), nargs, SQLITE_UTF8, udata, NULL, stepFun, finalFun, Rsqlite_ReleaseAggregate);
+    }
+
+    return(R_NilValue); // return a ticket to be able to release the fun.
+}
+
+
+
 
 
 /*
