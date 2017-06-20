@@ -1,7 +1,7 @@
 # Overview
-We can perform SQL queries from R to the SQL engine and bring the results back to R.
+The RSQLite package allows us to perform SQL queries from R to the SQL engine and bring the results back to R.
 We can then perform additional filtering and transformation on the results. 
-It can be convenient and efficient to do more of the computations in the SQL engine
+However, it can be convenient and efficient to do more of the computations in the SQL engine
 before bringing the results back to R for post-processing.
 
 SQL provides a somewhat limited set of functions for processing records during the SQL query.
