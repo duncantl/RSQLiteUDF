@@ -23,8 +23,9 @@ createSQLFunction(db, ptr, "myfloor", nargs = 1L)
 d = dbGetQuery(db, "SELECT surftemp, floor(surftemp), myfloor(surftemp) FROM measure_table LIMIT 5")
 print(d)
 
-
-createSQLFunction(db, function(x) x/2, "div2", nargs = 1L)
+f = function(x) x/2
+trace(f)
+createSQLFunction(db, f, "div2", nargs = 1L)
 d = dbGetQuery(db, "SELECT surftemp, div2(surftemp) FROM measure_table LIMIT 5")
 print(d)
 
