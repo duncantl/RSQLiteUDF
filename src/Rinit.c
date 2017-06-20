@@ -22,6 +22,7 @@ sqlite3_extension_init(sqlite3 *db,          /* The database connection */
 }
 
 
+#if OLD
 // From RSQLite's rsqlite.h
 typedef struct SQLiteConnection {
   sqlite3* drvConnection;  
@@ -35,6 +36,14 @@ GET_SQLITE_DB(SEXP rdb)
     SQLiteConnection * con = (SQLiteConnection *) R_ExternalPtrAddr(rdb);
     return(con->drvConnection);
 }
+
+#else
+sqlite3 *
+GET_SQLITE_DB(SEXP rdb)
+{
+    conn()
+}
+#endif
 
 SEXP
 R_enable_load_extension(SEXP rdb, SEXP on)
@@ -316,10 +325,11 @@ typedef int64_t         i64;
 /*
 ** largest integer value not greater than argument
 */
-void myfloorFunc(sqlite3_context *context, int argc, sqlite3_value **argv){
+void myfloorFunc(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
   double rVal=0.0;
 
-  switch( sqlite3_value_type(argv[0]) ){
+  switch( sqlite3_value_type( argv[0] ) ){
     case SQLITE_INTEGER: {
       i64 iVal = sqlite3_value_int64(argv[0]);
       sqlite3_result_int64(context, iVal);
@@ -336,3 +346,25 @@ void myfloorFunc(sqlite3_context *context, int argc, sqlite3_value **argv){
     }
   }
 }
+
+
+
+int
+fib2(int n)
+{
+    if(n < 2)
+	return(n);
+    
+    return(fib2(n-1) + fib2(n-2));
+}
+
+void
+sqlFib2(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+   int type = sqlite3_value_type(argv[0]);
+   fprintf(stderr, "data type in sqlFib2 %d\n", type);fflush(stderr);
+   int arg = sqlite3_value_int(argv[0]);
+   int ans = fib2(arg);
+   sqlite3_result_int(context, ans);
+}
+
