@@ -16,6 +16,10 @@ sqlite3_extension_init(sqlite3 *db,          /* The database connection */
 {
 
     SQLITE_EXTENSION_INIT2(pApi);
+#if 0
+Rprintf("in sqlite3_extension_init for RSQLiteUDF sqlite3_api = %p\n", sqlite3_api);
+Rprintf("value_int = %p\n", sqlite3_api->value_int); 
+#endif
 //    sqlite3_create_function(db, "registerFun", 2, SQLITE_UTF8, NULL, R_registerFunc, NULL, NULL);
 //    sqlite3_create_function(db, "ifloor", 1, SQLITE_UTF8, NULL, myfloorFunc, NULL, NULL);
     return(SQLITE_OK);
@@ -368,3 +372,10 @@ sqlFib2(sqlite3_context *context, int argc, sqlite3_value **argv)
    sqlite3_result_int(context, ans);
 }
 
+
+
+SEXP
+R_getSQLite3API()
+{
+  return(R_MakeExternalPtr((void *) sqlite3_api, Rf_install("sqlite3a_api"), R_NilValue));
+}
