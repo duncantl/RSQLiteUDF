@@ -8,7 +8,7 @@ function(db, dll = getLoadedDLLs()[[pkg]][["path"]],
     dll = path.expand(dll)
     
     if(!file.exists(dll))
-        stop("Cannot fild the extension file")
+        stop("Cannot find the extension file")
     
     dbGetQuery(db, sprintf("SELECT load_extension('%s')",  dll))
     
