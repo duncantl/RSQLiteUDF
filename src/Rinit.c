@@ -379,3 +379,28 @@ R_getSQLite3API()
 {
   return(R_MakeExternalPtr((void *) sqlite3_api, Rf_install("sqlite3a_api"), R_NilValue));
 }
+
+
+
+// probably in RSQLite.  And also we can do it via the R function sqliteExtension().
+// So not important.
+SEXP
+R_load_extension(SEXP rdb, SEXP r_file, SEXP r_entryFun)
+{
+    int status;
+    sqlite3 *db;
+    const char *entryFun = NULL, *file;
+    char *err;
+    if(Rf_length(r_entryFun))
+	entryFun = CHAR(STRING_ELT(r_entryFun, 0));
+
+    db = GET_SQLITE_DB(rdb);
+    file = CHAR(STRING_ELT(r_file, 0));
+    status = sqlite3_load_extension(db, file, entryFun, &err);
+    if(status) {
+	PROBLEM "failed to load SQLite3 extension: %s", err
+	    ERROR;
+// sqlite3_free(err);
+    }
+    return(ScalarInteger(TRUE));
+}
