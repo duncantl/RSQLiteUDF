@@ -313,6 +313,16 @@ lastNChars(sqlite3_context *context, int argc, sqlite3_value **argv)
 
 
 
+#include <math.h>
+void
+sqlLog(sqlite3_context *context, int argc, sqlite3_value **argv)
+{
+   double x = sqlite3_value_double(argv[0]);
+   double ans = log(x);
+   sqlite3_result_double(context, ans);
+}
+
+
 
 /*
 Borrowed from the RSQLite package's code, and originally from Liam Healy.
