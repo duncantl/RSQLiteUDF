@@ -1,3 +1,5 @@
+# This requires RSQLite_1.0.0
+
 
 #dyn.load("src/Rinit.so")
 library(RSQLite)
@@ -46,6 +48,12 @@ createSQLFunction(db, function(x, y) x/2 + y, "foo", nargs = -1L)
 d = dbGetQuery(db, "SELECT surftemp, foo(surftemp, 2) FROM measure_table LIMIT 5")
 print(d)
 
+
+
+createSQLFunction(db, function(x) as.integer(grepl("^[45]/", x)), "aprilMay", nargs = -1L)
+d = dbGetQuery(db, "SELECT * FROM orders WHERE aprilMay(order_date)")
+
+d = dbGetQuery(db, "SELECT surftemp, foo(surftemp, 2) FROM measure_table LIMIT 5")
 
 ###########################
 

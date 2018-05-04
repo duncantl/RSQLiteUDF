@@ -101,7 +101,8 @@ int
 convertRResult(SEXP ans, sqlite3_context *context)
 {
     switch(TYPEOF(ans)) {
-      case INTSXP:
+    case INTSXP:
+    case LGLSXP:	
 	  sqlite3_result_int(context, INTEGER(ans)[0]);
 	  break;
       case REALSXP:
