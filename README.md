@@ -1,9 +1,15 @@
 # Overview
 
 **Note this no longer works with the most recent version(s) of RSQLite, i.e., greater than 1.0.0
-as this changed the C code storing the connection to the database. It is possible to modify this
-package to access the C structure we need. However, it is wrapped within numerous layers of C++ 
-smart pointers**
+as this changed the C code storing the connection to the database. 
+For now, we use RSQLite version 1.0.0.
+In the future, we will make this work with subsequent versions of RSQLite.
+The reason is that accessing the C-level pointer to the database was changed
+in versions >  1.0.0 due to the use of Rcpp and I haven't had the time to chase 
+down the numerous layers of C++ "smart" pointers.
+This is a minor technical matter. The focus here is on the proof of concept
+and the logistics to make it work.
+**
 
 The RSQLite package allows us to perform SQL queries from R to the SQL engine and bring the results back to R.
 We can then perform additional filtering and transformation on the results. 
