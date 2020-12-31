@@ -51,6 +51,7 @@ print(d)
 
 
 createSQLFunction(db, function(x) as.integer(grepl("^[45]/", x)), "aprilMay", nargs = -1L)
+#???? Where is the orders table?
 d = dbGetQuery(db, "SELECT * FROM orders WHERE aprilMay(order_date)")
 
 d = dbGetQuery(db, "SELECT surftemp, foo(surftemp, 2) FROM measure_table LIMIT 5")
