@@ -12,7 +12,10 @@ f = function(x) {
         printf("[f] %lf\n", x)
         x + 1
     }
-cfun = compileFunction(f, DoubleType, list(DoubleType))
+
+# Temporarily added .loadExternalRoutines = FALSE as compileFunction was failing when setting metadata for these symbols.
+cfun = compileFunction(f, DoubleType, list(DoubleType), .loadExternalRoutines = FALSE)
+llvmAddSymbol("printf")
 
 .llvm(cfun, 3)
 
@@ -41,7 +44,10 @@ pType = pointerType(VoidType)
 external = getBuiltInRoutines(sqlite3_value_double = list(DoubleType, pType),
                               sqlite3_result_double = list(VoidType, pType, DoubleType))
 cwrapper = compileFunction(wrapper, VoidType, list(pType, Int32Type, pointerType(pType)),  module = as(cfun, "Module"),
-                           .builtInRoutines = external, .readOnly = c("nargs", "val"))
+                           .builtInRoutines = external, .readOnly = c("nargs", "val"), .loadExternalRoutines = FALSE)
+
+
+llvmAddSymbol("sqlite3_value_double", "sqlite3_result_double")
 
 
 
