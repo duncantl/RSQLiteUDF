@@ -16,9 +16,9 @@ sqlite3_extension_init(sqlite3 *db,          /* The database connection */
 {
 
     SQLITE_EXTENSION_INIT2(pApi);
-#if 0
-Rprintf("in sqlite3_extension_init for RSQLiteUDF sqlite3_api = %p\n", sqlite3_api);
-Rprintf("value_int = %p\n", sqlite3_api->value_int); 
+#if 1
+    Rprintf("in sqlite3_extension_init for RSQLiteUDF sqlite3_api = %x\n", (void *) sqlite3_api);
+    Rprintf("value_int = %x\n", (void *) sqlite3_api->value_int); 
 #endif
 //    sqlite3_create_function(db, "registerFun", 2, SQLITE_UTF8, NULL, R_registerFunc, NULL, NULL);
 //    sqlite3_create_function(db, "ifloor", 1, SQLITE_UTF8, NULL, myfloorFunc, NULL, NULL);
@@ -376,8 +376,10 @@ fib2(int n)
 void
 sqlFib2(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
+#if 0    
    int type = sqlite3_value_type(argv[0]);
    fprintf(stderr, "data type in sqlFib2 %d\n", type);fflush(stderr);
+#endif   
    int arg = sqlite3_value_int(argv[0]);
    int ans = fib2(arg);
    sqlite3_result_int(context, ans);
@@ -388,7 +390,7 @@ sqlFib2(sqlite3_context *context, int argc, sqlite3_value **argv)
 SEXP
 R_getSQLite3API()
 {
-  return(R_MakeExternalPtr((void *) sqlite3_api, Rf_install("sqlite3a_api"), R_NilValue));
+  return(R_MakeExternalPtr((void *) sqlite3_api, Rf_install("sqlite3_api"), R_NilValue));
 }
 
 
@@ -414,4 +416,29 @@ R_load_extension(SEXP rdb, SEXP r_file, SEXP r_entryFun)
 // sqlite3_free(err);
     }
     return(ScalarInteger(TRUE));
+}
+
+
+
+
+
+int
+mysqlite3_value_int(sqlite3_value **val)
+{
+    fprintf(stderr, "in mysqlite3_value_int %p and %p = %d\n", val, val[0], sqlite3_value_int(val[0]));
+    return(sqlite3_value_int(val[0]));
+}
+
+int
+mysqlite3_value_int2(sqlite3_value *val)
+{
+    fprintf(stderr, "in mysqlite3_value_int2 %p = %d\n", val, sqlite3_value_int(val));
+    return(sqlite3_value_int(val));
+}
+
+void
+mysqlite3_result_int(sqlite3_context *ctxt, int val)
+{
+    fprintf(stderr, "in mysqlite3_result_int %p and %d\n", ctxt, val);
+    return(sqlite3_result_int(ctxt, val));
 }
