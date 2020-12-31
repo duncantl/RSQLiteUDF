@@ -2,6 +2,7 @@ library(RSQLite)
 library(RSQLiteUDF)
 
 library(Rllvm)
+sir = parseIR("sqle.ir")
 
 if(FALSE) {
 # Load the fib routine and test.
@@ -10,7 +11,7 @@ mod = parseIR(system.file("IR", "fib.ll", package = "Rllvm"))
 } else {
 #XXX Will copy fib here later. For now create function that returns 10L always.
 fib = simpleFunction("fib", Int32Type, n = Int32Type, mod = sir)
-fib$ir$createReturn(ir$createConstant(10L))
+fib$ir$createReturn(fib$ir$createConstant(10L))
 }
 
 
@@ -29,8 +30,6 @@ function(ctxt, nargs, val)
 # We need type information from sqlite3ext.h. So we read it via IR
 # by first generating the IR from sqle.c.  This is the same for any UDF.
 
-library(Rllvm)
-sir = parseIR("sqle.ir")
 ty = Rllvm::getType(sir[["sqlite3_api"]])
 struct = getElementType(getElementType(ty))
 fields = getFields(struct)
@@ -62,7 +61,6 @@ arg = ir$createLoad(sfib$params$val)
 #arg = ir$createGEP(arg, c(0L))
 #arg = sfib$params$val
 #arg = ir$createLoad(arg)
-if(FALSE) {
 i = ir$createCall(viFun, arg) # ir$createLoad(sfib$params$ctxt), arg)
 
 ans = ir$createCall(sir$fib, i)
@@ -72,22 +70,38 @@ api = ir$createLoad(sir[["sqlite3_api"]])
 gep = ir$createGEP(api, c(ir$createConstant(0L, Int64Type), offsets["result_int"]))
 riFun = ir$createLoad(gep)
 # Do we need to ensure the inbounds is on the GEP.
-xx = ir$createCall(riFun, ir$createLoad(sfib$params$ctxt), ans)
-xx = ir$createReturn()
-}
+xx = ir$createCall(riFun, sfib$params$ctxt, ans)
+ir$createReturn()
 
 
+
+set =  Function("setSQLAPI2", VoidType, list(ptr = getElementType(getType(sir[["sqlite3_api"]]))), module = sir)
+ir = IRBuilder(Block(set))
+#v = ir$createLoad(getParameters(set)[[1]])
+v = getParameters(set)[[1]]
+ir$createStore(v, sir[["sqlite3_api"]])
+ir$createReturn()
+
+stopifnot(verifyModule(sir))
 
 ######################################################
 if(FALSE) {
 db = dbConnect(SQLite(), "fib.db")
 
-ee = ExecutionEngine(mod)
-
-ptr = getPointerToFunction(mod$sqlFib, ee)  
-
 sqliteExtension(db, getLoadedDLLs()[["RSQLiteUDF"]][["path"]])
 initExtension(db)
+
+ee = ExecutionEngine(sir)
+ptr = getPointerToFunction(sir$sqlFib, ee)  
+
+# We will generate our own version of setSQLAPI.
+# Also can use sqlite3_api_routines as the type so it won't appear as char *.
+# So may not need to create the CIF.
+api = .Call("R_getSQLite3API")
+#cif = Rffi::CIF(Rffi::voidType, list(Rffi::pointerType))
+#.llvm(sir$setSQLAPI2, api, .ee = ee, .ffi = cif)
+.llvm(sir$setSQLAPI2, api, .ee = ee)
+
 
 createSQLFunction(db, ptr@ref, "fib", nargs = 1L)
 d = dbGetQuery(db, "SELECT i, fib(i) from vals")

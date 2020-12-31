@@ -9,3 +9,10 @@
 */
 SQLITE_EXTENSION_INIT1
 
+
+#ifdef ADD_SET_API_R
+void setSQLAPI(void *p)
+{
+    sqlite3_api = (sqlite3_api_routines *) p;
+}
+#endif
