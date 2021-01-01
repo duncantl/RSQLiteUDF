@@ -4,19 +4,11 @@ library(RSQLiteUDF)
 library(Rllvm)
 sir = parseIR("sqle.ir")
 
-if(TRUE) {
 # Load the fib routine and test.
 mod = parseIR(system.file("IR", "fib.ll", package = "Rllvm"))
-#.llvm(mod$fib, 10)
+.llvm(mod$fib, 10)
+# copy the fib routine to sir.
 sir$fib = mod$fib
-
-#newFib = Function("fib", Int32Type, list(Int32Type), module = sir)
-#.Call("R_CloneFunctionInto", mod$fib, newFib, TRUE) # FALSE may be appropriate.  Have to handle recursive references to fib
-} else {
-#XXX Will copy fib here later. For now create function that returns 10L always.
-fib = simpleFunction("fib", Int32Type, n = Int32Type, mod = sir)
-fib$ir$createReturn(fib$ir$createConstant(10L))
-}
 
 
 # This is the pseudo-codde for the wrapper we want to create
@@ -30,7 +22,7 @@ function(ctxt, nargs, val)
 }
 }
 
-# How to build this routine.
+# How to build this wrapper routine.  We need to use the function pointers from fields in the  sqlite3_api object.
 # We need type information from sqlite3ext.h. So we read it via IR
 # by first generating the IR from sqle.c.  This is the same for any UDF.
 
@@ -62,26 +54,22 @@ api = ir$createLoad(sir[["sqlite3_api"]])
 gep = ir$createGEP(api, c(ir$createConstant(0L, Int64Type), offsets["value_int"]))
 viFun = ir$createLoad(gep)
 arg = ir$createLoad(sfib$params$val)
-#arg = ir$createGEP(arg, c(0L))
-#arg = sfib$params$val
-#arg = ir$createLoad(arg)
-i = ir$createCall(viFun, arg) # ir$createLoad(sfib$params$ctxt), arg)
+i = ir$createCall(viFun, arg) 
 
 ans = ir$createCall(sir$fib, i)
 
 
 api = ir$createLoad(sir[["sqlite3_api"]])
 gep = ir$createGEP(api, c(ir$createConstant(0L, Int64Type), offsets["result_int"]))
+isInBounds(gep) = TRUE
 riFun = ir$createLoad(gep)
-# Do we need to ensure the inbounds is on the GEP.
-xx = ir$createCall(riFun, sfib$params$ctxt, ans)
+ir$createCall(riFun, sfib$params$ctxt, ans)
 ir$createReturn()
 
 
 
 set =  Function("setSQLAPI2", VoidType, list(ptr = getElementType(getType(sir[["sqlite3_api"]]))), module = sir)
 ir = IRBuilder(Block(set))
-#v = ir$createLoad(getParameters(set)[[1]])
 v = getParameters(set)[[1]]
 ir$createStore(v, sir[["sqlite3_api"]])
 ir$createReturn()
@@ -89,6 +77,7 @@ ir$createReturn()
 stopifnot(verifyModule(sir))
 
 ######################################################
+# Now use these routines in the database.
 if(TRUE) {
 db = dbConnect(SQLite(), "fib.db")
 
@@ -98,12 +87,9 @@ initExtension(db)
 ee = ExecutionEngine(sir)
 ptr = getPointerToFunction(sir$sqlFib, ee)  
 
-# We will generate our own version of setSQLAPI.
-# Also can use sqlite3_api_routines as the type so it won't appear as char *.
-# So may not need to create the CIF.
+# Since we use the sqlite3_api_routines as the type in setSQLAPI2, it won't appear as char * and .llvm()
+# won't think it should be treated as a character vector.
 api = .Call("R_getSQLite3API")
-#cif = Rffi::CIF(Rffi::voidType, list(Rffi::pointerType))
-#.llvm(sir$setSQLAPI2, api, .ee = ee, .ffi = cif)
 .llvm(sir$setSQLAPI2, api, .ee = ee)
 
 
