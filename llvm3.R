@@ -57,9 +57,7 @@ initExtension(db)
 d = dbGetQuery(db, "SELECT i from vals")
 
 createSQLFunction(db, ptr@ref, "fib", nargs = 1L)
-#d = dbGetQuery(db, "SELECT i, fib(i) from vals")
-
-
+d = dbGetQuery(db, "SELECT i, fib(i) from vals")
 
 
 
