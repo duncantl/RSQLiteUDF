@@ -4,10 +4,14 @@ library(RSQLiteUDF)
 library(Rllvm)
 sir = parseIR("sqle.ir")
 
-if(FALSE) {
+if(TRUE) {
 # Load the fib routine and test.
 mod = parseIR(system.file("IR", "fib.ll", package = "Rllvm"))
-.llvm(mod$fib, 10)
+#.llvm(mod$fib, 10)
+sir$fib = mod$fib
+
+#newFib = Function("fib", Int32Type, list(Int32Type), module = sir)
+#.Call("R_CloneFunctionInto", mod$fib, newFib, TRUE) # FALSE may be appropriate.  Have to handle recursive references to fib
 } else {
 #XXX Will copy fib here later. For now create function that returns 10L always.
 fib = simpleFunction("fib", Int32Type, n = Int32Type, mod = sir)
@@ -85,7 +89,7 @@ ir$createReturn()
 stopifnot(verifyModule(sir))
 
 ######################################################
-if(FALSE) {
+if(TRUE) {
 db = dbConnect(SQLite(), "fib.db")
 
 sqliteExtension(db, getLoadedDLLs()[["RSQLiteUDF"]][["path"]])
@@ -105,8 +109,11 @@ api = .Call("R_getSQLite3API")
 
 createSQLFunction(db, ptr@ref, "fib", nargs = 1L)
 d = dbGetQuery(db, "SELECT i, fib(i) from vals")
-}
 
+
+rtruth = sapply(d[,1], function(i) .llvm(sir$fib, i))
+stopifnot(all(rtruth == d[,2]))
+}
 
 
 
